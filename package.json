@@ -1,9 +1,9 @@
 {
   "name": "@mweinheimer/odoo-mcp-server",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP (Model Context Protocol) server for Odoo integration with HTTP and STDIO transports, supporting XML-RPC and JSON-RPC",
   "main": "dist/http-mcp-server.js",
-  "types": "dist/index.d.ts", 
+  "types": "dist/index.d.ts",
   "type": "module",
   "bin": {
     "odoo-mcp-server": "dist/bin/odoo-mcp-server.js",
@@ -51,7 +51,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/http-mcp-server.js",
-    "start:server": "node dist/http-mcp-server.js", 
+    "start:server": "node dist/http-mcp-server.js",
     "local": "node start-local.mjs",
     "dev": "tsc --watch",
     "dev:http": "tsc --watch & nodemon dist/http-mcp-server.js",
