@@ -1,0 +1,127 @@
+{
+  "name": "@mweinheimer/odoo-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP (Model Context Protocol) server for Odoo integration with HTTP and STDIO transports, supporting XML-RPC and JSON-RPC",
+  "main": "dist/http-mcp-server.js",
+  "types": "dist/index.d.ts", 
+  "type": "module",
+  "bin": {
+    "odoo-mcp-server": "dist/bin/odoo-mcp-server.js",
+    "odoo-mcp-client": "dist/bin/odoo-mcp-client.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts"
+    },
+    "./server": {
+      "import": "./dist/src/http-mcp-server.js",
+      "types": "./dist/src/http-mcp-server.d.ts"
+    },
+    "./client": {
+      "import": "./dist/src/http-mcp-client.js",
+      "types": "./dist/src/http-mcp-client.d.ts"
+    },
+    "./odoo-client": {
+      "import": "./dist/src/models/odoo-client.js",
+      "types": "./dist/src/models/odoo-client.d.ts"
+    },
+    "./odoo-tools": {
+      "import": "./dist/src/models/odoo-tools.js",
+      "types": "./dist/src/models/odoo-tools.d.ts"
+    }
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "QUICK-START.md",
+    "EXAMPLES.md",
+    "TRANSPORT-MODES.md",
+    "MCP-SETUP.md",
+    "TESTING-GUIDE.md",
+    "start.sh",
+    "start-local.mjs",
+    ".env.local.example"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/http-mcp-server.js",
+    "start:server": "node dist/http-mcp-server.js", 
+    "local": "node start-local.mjs",
+    "dev": "tsc --watch",
+    "dev:http": "tsc --watch & nodemon dist/http-mcp-server.js",
+    "clean": "rm -rf dist",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "prepublishOnly": "npm run build && npm run lint",
+    "prepare": "npm run build",
+    "prepack": "npm run build",
+    "release:patch": "npm version patch && git push origin main --tags",
+    "release:minor": "npm version minor && git push origin main --tags",
+    "release:major": "npm version major && git push origin main --tags",
+    "publish:public": "npm publish --access public",
+    "publish:dry": "npm publish --dry-run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/heimerle/odoo-mcp-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/heimerle/odoo-mcp-server/issues"
+  },
+  "homepage": "https://github.com/heimerle/odoo-mcp-server#readme",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "odoo",
+    "erp",
+    "api",
+    "xml-rpc",
+    "json-rpc",
+    "http",
+    "stdio",
+    "rest",
+    "typescript",
+    "server",
+    "integration",
+    "automation",
+    "express",
+    "claude",
+    "claude-desktop",
+    "ai",
+    "llm"
+  ],
+  "author": {
+    "name": "Michael Weinheimer",
+    "email": "michael@gw42.de",
+    "url": "https://gw42.de"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.0",
+    "xmlrpc": "^1.3.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.0",
+    "@types/express": "^4.17.0",
+    "@types/jest": "^29.0.0",
+    "@types/node": "^20.0.0",
+    "@types/xmlrpc": "^1.3.10",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.0.0",
+    "nodemon": "^3.0.0",
+    "ts-jest": "^29.0.0",
+    "typescript": "^5.0.0"
+  }
+}
