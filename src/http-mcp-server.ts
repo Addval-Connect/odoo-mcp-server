@@ -673,7 +673,7 @@ export class HttpMcpServer {
           const responseJson = JSON.stringify({ jsonrpc: '2.0', result, id });
           const sizeKB = Buffer.byteLength(responseJson, 'utf8') / 1024;
           
-          if (sizeKB > 95) { // ChatGPT has ~100KB limit
+          if (sizeKB > 1024) { // ChatGPT has ~100KB limit
             console.error(`[CHATGPT-WARNING] Response too large: ${sizeKB.toFixed(1)}KB for tool ${toolName}`);
             return {
               jsonrpc: '2.0',
