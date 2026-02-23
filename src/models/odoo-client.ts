@@ -50,7 +50,9 @@ export class OdooApiClient {
   }
 
   /**
-   * Authenticate with Odoo server
+   * Authenticate with Odoo server.
+   * If the database is not found, tries to find a matching database by normalizing
+   * hyphens and underscores (some MCP clients replace hyphens with underscores in headers).
    */
   async authenticate(): Promise<OdooAuthResult> {
     try {
@@ -65,7 +67,32 @@ export class OdooApiClient {
           throw new Error(`Unsupported transport: ${this.transport}`);
       }
     } catch (error) {
-      throw new Error(`Authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      if (msg.includes('Database not found')) {
+        const corrected = await this.findMatchingDatabase(this.config.database);
+        if (corrected !== this.config.database) {
+          console.error(`[Odoo] DB "${this.config.database}" not found, retrying with "${corrected}"`);
+          this.config = { ...this.config, database: corrected };
+          return this.authenticate();
+        }
+      }
+      throw new Error(`Authentication failed: ${msg}`);
+    }
+  }
+
+  /**
+   * Find the real database name by normalizing hyphens/underscores.
+   * Returns the original name if no match is found.
+   */
+  private async findMatchingDatabase(name: string): Promise<string> {
+    try {
+      const databases = await this.listDatabases();
+      if (databases.includes(name)) return name;
+      const normalize = (s: string) => s.replace(/[-_]/g, '').toLowerCase();
+      const normalized = normalize(name);
+      return databases.find(db => normalize(db) === normalized) ?? name;
+    } catch {
+      return name;
     }
   }
 
