@@ -311,8 +311,9 @@ export class HttpMcpServer {
           res.setHeader('MCP-Protocol-Version', protocolVersion);
           res.setHeader('Content-Type', 'application/json');
           
+          const session = this.sessions.get(sessionId);
           const request = { ...req.body, headers: req.headers };
-          const response = await this.processJsonRpcRequest(request);
+          const response = await this.processJsonRpcRequest(request, session?.controller);
           
           return res.status(200).json(response);
         }

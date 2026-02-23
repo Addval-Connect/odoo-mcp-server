@@ -167,4 +167,25 @@ describe('Tool calls use session controller', () => {
     expect(globalSpy).toHaveBeenCalled();
     jest.restoreAllMocks();
   });
+
+  it('processJsonRpcRequest uses session controller getAvailableTools for tools/list', async () => {
+    const sessionController = new McpServerController();
+    const sessionSpy = jest.spyOn(sessionController, 'getAvailableTools').mockReturnValue([]);
+    const globalSpy = jest.spyOn(server.controller, 'getAvailableTools');
+
+    const request = {
+      jsonrpc: '2.0',
+      method: 'tools/list',
+      params: {},
+      id: 1,
+    };
+
+    const response = await server.processJsonRpcRequest(request, sessionController);
+
+    expect(sessionSpy).toHaveBeenCalled();
+    expect(globalSpy).not.toHaveBeenCalled();
+    expect(response.result.tools).toBeDefined();
+
+    jest.restoreAllMocks();
+  });
 });
