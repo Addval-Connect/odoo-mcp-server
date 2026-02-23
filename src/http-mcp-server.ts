@@ -33,7 +33,7 @@ export class HttpMcpServer {
   private app: express.Application;
   private controller: McpServerController;
   private port: number;
-  private sessions: Map<string, { state: any; createdAt: Date }>;
+  private sessions: Map<string, { state: any; createdAt: Date; controller?: McpServerController }>;
 
   constructor(port: number = 3001) {
     this.port = port;
@@ -83,6 +83,29 @@ export class HttpMcpServer {
   
   private generateSessionId(): string {
     return crypto.randomUUID();
+  }
+
+  private async createSessionWithHeaders(
+    sessionId: string,
+    headers: Record<string, string | string[] | undefined>
+  ): Promise<void> {
+    let sessionController: McpServerController | undefined;
+
+    const creds = extractOdooHeaders(headers);
+    if (creds) {
+      sessionController = new McpServerController();
+      try {
+        await sessionController.handleToolCall('odoo_connect', creds);
+        console.error(`[MCP] Session ${sessionId}: auto-connected to Odoo via headers`);
+      } catch (error) {
+        console.error(
+          `[MCP] Session ${sessionId}: header auto-connect failed:`,
+          error instanceof Error ? error.message : error
+        );
+      }
+    }
+
+    this.sessions.set(sessionId, { state: {}, createdAt: new Date(), controller: sessionController });
   }
 
   private setupMiddleware(): void {
@@ -280,8 +303,8 @@ export class HttpMcpServer {
         // Handle initialize: create session and return session ID in header
         if (isInitialize) {
           const sessionId = this.generateSessionId();
-          this.sessions.set(sessionId, { state: {}, createdAt: new Date() });
-          
+          await this.createSessionWithHeaders(sessionId, req.headers as Record<string, string | string[] | undefined>);
+
           console.error(`[MCP] Initialize: Created session ${sessionId}`);
           
           res.setHeader('Mcp-Session-Id', sessionId);
