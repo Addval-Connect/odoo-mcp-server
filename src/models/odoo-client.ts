@@ -127,7 +127,7 @@ export class OdooApiClient {
     });
 
     if (response.data.error) {
-      throw new Error(response.data.error.message);
+      throw new Error(response.data.error.data?.message ?? response.data.error.message);
     }
 
     const result = response.data.result;
