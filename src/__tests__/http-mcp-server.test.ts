@@ -188,4 +188,36 @@ describe('Tool calls use session controller', () => {
 
     jest.restoreAllMocks();
   });
+
+  it('filters out odoo_connect from tools/list when session controller is present', async () => {
+    const sessionController = new McpServerController();
+    jest.spyOn(sessionController, 'getAvailableTools').mockReturnValue([
+      { name: 'odoo_connect', description: 'Connect', inputSchema: { type: 'object', properties: {} } },
+      { name: 'odoo_search_read', description: 'Search', inputSchema: { type: 'object', properties: {} } },
+    ]);
+
+    const request = { jsonrpc: '2.0', method: 'tools/list', params: {}, id: 1 };
+    const response = await server.processJsonRpcRequest(request, sessionController);
+
+    const names = response.result.tools.map((t: any) => t.name);
+    expect(names).not.toContain('odoo_connect');
+    expect(names).toContain('odoo_search_read');
+
+    jest.restoreAllMocks();
+  });
+
+  it('keeps odoo_connect in tools/list when no session controller (global mode)', async () => {
+    jest.spyOn(server.controller, 'getAvailableTools').mockReturnValue([
+      { name: 'odoo_connect', description: 'Connect', inputSchema: { type: 'object', properties: {} } },
+      { name: 'odoo_search_read', description: 'Search', inputSchema: { type: 'object', properties: {} } },
+    ]);
+
+    const request = { jsonrpc: '2.0', method: 'tools/list', params: {}, id: 1 };
+    const response = await server.processJsonRpcRequest(request, undefined);
+
+    const names = response.result.tools.map((t: any) => t.name);
+    expect(names).toContain('odoo_connect');
+
+    jest.restoreAllMocks();
+  });
 });

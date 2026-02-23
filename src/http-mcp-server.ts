@@ -662,6 +662,12 @@ export class HttpMcpServer {
             const openaiClient = typeof ua === 'string' && ua.toLowerCase().includes('openai-mcp');
             let transformed = tools;
 
+            // When the session has its own Odoo controller (credentials provided via headers),
+            // hide odoo_connect so the AI doesn't ask the user for credentials again.
+            if (sessionController) {
+              transformed = transformed.filter(t => t.name !== 'odoo_connect');
+            }
+
             // Apply minimal mode (environment flag or auto if openai-mcp and env auto flag maybe later)
             if (minimalMode || (openaiClient && process.env.MCP_MINIMAL_MODE_AUTO === 'true')) {
               transformed = tools.filter(t => ['echo', 'odoo_version'].includes(t.name));
