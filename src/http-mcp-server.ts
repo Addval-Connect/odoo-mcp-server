@@ -112,7 +112,7 @@ export class HttpMcpServer {
     this.app.use(cors({
       origin: '*',
       methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-MCP-Client', 'Mcp-Session-Id', 'MCP-Protocol-Version', 'Accept'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-MCP-Client', 'Mcp-Session-Id', 'MCP-Protocol-Version', 'Accept', 'X-Odoo-URL', 'X-Odoo-DB', 'X-Odoo-Username', 'X-Odoo-Password', 'X-Odoo-Transport'],
       exposedHeaders: ['Mcp-Session-Id', 'MCP-Protocol-Version']
     }));
     
