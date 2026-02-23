@@ -1,13 +1,6 @@
-// src/__tests__/http-mcp-server.test.ts
-import { HttpMcpServer } from '../http-mcp-server.js';
+import { HttpMcpServer, extractOdooHeaders } from '../http-mcp-server.js';
 
-describe('HttpMcpServer.extractOdooHeaders', () => {
-  let server: any;
-
-  beforeEach(() => {
-    server = new HttpMcpServer(0); // port 0 = don't listen
-  });
-
+describe('extractOdooHeaders', () => {
   it('returns credentials when all four headers are present', () => {
     const headers = {
       'x-odoo-url': 'https://mi.odoo.com',
@@ -15,7 +8,7 @@ describe('HttpMcpServer.extractOdooHeaders', () => {
       'x-odoo-username': 'admin',
       'x-odoo-password': 'secret',
     };
-    const result = server.extractOdooHeaders(headers);
+    const result = extractOdooHeaders(headers);
     expect(result).toEqual({
       url: 'https://mi.odoo.com',
       database: 'mydb',
@@ -33,17 +26,16 @@ describe('HttpMcpServer.extractOdooHeaders', () => {
       'x-odoo-password': 'secret',
       'x-odoo-transport': 'xmlrpc',
     };
-    const result = server.extractOdooHeaders(headers);
+    const result = extractOdooHeaders(headers);
     expect(result?.transport).toBe('xmlrpc');
   });
 
   it('returns null when any required header is missing', () => {
-    expect(server.extractOdooHeaders({ 'x-odoo-url': 'https://mi.odoo.com' })).toBeNull();
-    expect(server.extractOdooHeaders({})).toBeNull();
-    expect(server.extractOdooHeaders({
+    expect(extractOdooHeaders({ 'x-odoo-url': 'https://mi.odoo.com' })).toBeNull();
+    expect(extractOdooHeaders({})).toBeNull();
+    expect(extractOdooHeaders({
       'x-odoo-url': 'https://mi.odoo.com',
       'x-odoo-db': 'mydb',
-      // missing username and password
     })).toBeNull();
   });
 
@@ -54,8 +46,18 @@ describe('HttpMcpServer.extractOdooHeaders', () => {
       'x-odoo-username': ['admin'],
       'x-odoo-password': ['secret'],
     };
-    const result = server.extractOdooHeaders(headers);
+    const result = extractOdooHeaders(headers);
     expect(result?.url).toBe('https://mi.odoo.com');
     expect(result?.database).toBe('mydb');
+  });
+
+  it('returns null when a required array header value is empty', () => {
+    const headers = {
+      'x-odoo-url': [],
+      'x-odoo-db': 'mydb',
+      'x-odoo-username': 'admin',
+      'x-odoo-password': 'secret',
+    };
+    expect(extractOdooHeaders(headers)).toBeNull();
   });
 });

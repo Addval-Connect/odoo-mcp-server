@@ -12,6 +12,23 @@ import crypto from 'crypto';
 import { McpServerController } from './controllers/index.js';
 import { logServerEvent } from './views/index.js';
 
+export function extractOdooHeaders(headers: Record<string, string | string[] | undefined>): {
+  url: string; database: string; username: string; password: string; transport: string;
+} | null {
+  const pick = (v: string | string[] | undefined): string | undefined =>
+    Array.isArray(v) ? v[0] : v;
+
+  const url      = pick(headers['x-odoo-url']);
+  const database = pick(headers['x-odoo-db']);
+  const username = pick(headers['x-odoo-username']);
+  const password = pick(headers['x-odoo-password']);
+  const transport = pick(headers['x-odoo-transport']) ?? 'jsonrpc';
+
+  if (!url || !database || !username || !password) return null;
+
+  return { url, database, username, password, transport };
+}
+
 export class HttpMcpServer {
   private app: express.Application;
   private controller: McpServerController;
@@ -66,23 +83,6 @@ export class HttpMcpServer {
   
   private generateSessionId(): string {
     return crypto.randomUUID();
-  }
-
-  private extractOdooHeaders(headers: Record<string, string | string[] | undefined>): {
-    url: string; database: string; username: string; password: string; transport: string;
-  } | null {
-    const pick = (v: string | string[] | undefined): string | undefined =>
-      Array.isArray(v) ? v[0] : v;
-
-    const url      = pick(headers['x-odoo-url']);
-    const database = pick(headers['x-odoo-db']);
-    const username = pick(headers['x-odoo-username']);
-    const password = pick(headers['x-odoo-password']);
-    const transport = pick(headers['x-odoo-transport']) ?? 'jsonrpc';
-
-    if (!url || !database || !username || !password) return null;
-
-    return { url, database, username, password, transport };
   }
 
   private setupMiddleware(): void {
