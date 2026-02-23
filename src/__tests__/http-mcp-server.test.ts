@@ -119,3 +119,52 @@ describe('Session creation with X-Odoo-* headers', () => {
     expect(session).toBeDefined();
   });
 });
+
+describe('Tool calls use session controller', () => {
+  let server: any;
+
+  beforeEach(() => {
+    server = new HttpMcpServer(0);
+  });
+
+  it('processJsonRpcRequest uses provided sessionController over global controller', async () => {
+    const sessionController = new McpServerController();
+    const sessionSpy = jest.spyOn(sessionController, 'handleToolCall').mockResolvedValue({
+      content: [{ type: 'text', text: 'session result' }],
+    });
+    const globalSpy = jest.spyOn(server.controller, 'handleToolCall');
+
+    const request = {
+      jsonrpc: '2.0',
+      method: 'tools/call',
+      params: { name: 'echo', arguments: { message: 'hi' } },
+      id: 1,
+    };
+
+    const response = await server.processJsonRpcRequest(request, sessionController);
+
+    expect(sessionSpy).toHaveBeenCalledWith('echo', { message: 'hi' });
+    expect(globalSpy).not.toHaveBeenCalled();
+    expect(response.result).toBeDefined();
+
+    jest.restoreAllMocks();
+  });
+
+  it('processJsonRpcRequest falls back to global controller when no session controller', async () => {
+    const globalSpy = jest.spyOn(server.controller, 'handleToolCall').mockResolvedValue({
+      content: [{ type: 'text', text: 'global result' }],
+    });
+
+    const request = {
+      jsonrpc: '2.0',
+      method: 'tools/call',
+      params: { name: 'echo', arguments: { message: 'hi' } },
+      id: 1,
+    };
+
+    await server.processJsonRpcRequest(request, undefined);
+
+    expect(globalSpy).toHaveBeenCalled();
+    jest.restoreAllMocks();
+  });
+});

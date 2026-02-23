@@ -341,9 +341,10 @@ export class HttpMcpServer {
         console.error(`[MCP] Request with session ${sessionId}: ${req.body?.method}`);
         
         res.setHeader('MCP-Protocol-Version', protocolVersion);
-        
+
+        const session = sessionId ? this.sessions.get(sessionId) : undefined;
         const request = { ...req.body, headers: req.headers, sessionId };
-        const response = await this.processJsonRpcRequest(request);
+        const response = await this.processJsonRpcRequest(request, session?.controller);
         
         // Log debug info for tools/list
         if (req.body?.method === 'tools/list') {
@@ -618,7 +619,8 @@ export class HttpMcpServer {
     });
   }
 
-  private async processJsonRpcRequest(request: any): Promise<any> {
+  private async processJsonRpcRequest(request: any, sessionController?: McpServerController): Promise<any> {
+    const controller = sessionController ?? this.controller;
     const { method, params, id } = request;
     const minimalMode = process.env.MCP_MINIMAL_MODE === 'true';
     const simplifySchema = process.env.MCP_SIMPLIFY_SCHEMA === 'true';
@@ -649,7 +651,7 @@ export class HttpMcpServer {
 
         case 'tools/list': {
           try {
-            const tools = this.controller.getAvailableTools();
+            const tools = controller.getAvailableTools();
             const ua = (request?.headers?.['user-agent']) || ''; // may not exist depending on caller context
             const openaiClient = typeof ua === 'string' && ua.toLowerCase().includes('openai-mcp');
             let transformed = tools;
@@ -707,7 +709,7 @@ export class HttpMcpServer {
             throw new Error('Tool name is required');
           }
 
-          const result = await this.controller.handleToolCall(toolName, toolArgs);
+          const result = await controller.handleToolCall(toolName, toolArgs);
           
           // ChatGPT-Safety: Check response size
           const responseJson = JSON.stringify({ jsonrpc: '2.0', result, id });
