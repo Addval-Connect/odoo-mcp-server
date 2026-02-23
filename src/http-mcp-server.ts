@@ -34,9 +34,14 @@ export class HttpMcpServer {
   private controller: McpServerController;
   private port: number;
   private sessions: Map<string, { state: any; createdAt: Date; controller?: McpServerController }>;
+  private mcpPath: string;   // replaces '/mcp' in MCP routes
+  private utilPath: string;  // prefix for utility routes (/health, /info, /docs)
 
   constructor(port: number = 3001) {
     this.port = port;
+    const envPath = process.env.MCP_BASE_PATH?.replace(/\/$/,''); // strip trailing slash
+    this.mcpPath = envPath || '/mcp';
+    this.utilPath = envPath || '';
     this.app = express();
     this.controller = new McpServerController();
     this.sessions = new Map();
@@ -132,7 +137,7 @@ export class HttpMcpServer {
       
       // For now, allow both authenticated and unauthenticated access
       // TODO: Implement proper ChatGPT auth method
-      if (authToken && req.path.startsWith('/mcp')) {
+      if (authToken && req.path.startsWith(this.mcpPath)) {
         const authHeader = req.headers.authorization;
         const expectedToken = `Bearer ${authToken}`;
         
@@ -166,7 +171,7 @@ export class HttpMcpServer {
 
   private setupMcpRoutes(): void {
     // Root MCP endpoint for protocol discovery (GET)
-    this.app.get('/mcp', (req, res) => {
+    this.app.get(this.mcpPath, (req, res) => {
       res.json({
         protocol: 'mcp',
         version: '2024-11-05',
@@ -181,11 +186,11 @@ export class HttpMcpServer {
           streaming: false
         },
         endpoints: {
-          initialize: 'POST /mcp/initialize',
-          tools: 'GET /mcp/tools',
-          execute: 'POST /mcp/tools/:toolName',
-          batch: 'POST /mcp/batch',
-          jsonrpc: 'POST /mcp'
+          initialize: `POST ${this.mcpPath}/initialize`,
+          tools: `GET ${this.mcpPath}/tools`,
+          execute: `POST ${this.mcpPath}/tools/:toolName`,
+          batch: `POST ${this.mcpPath}/batch`,
+          jsonrpc: `POST ${this.mcpPath}`
         }
       });
     });
@@ -193,7 +198,7 @@ export class HttpMcpServer {
     // MCP Protocol v2024-11-05 compliant endpoints
     
     // Initialize endpoint
-    this.app.post('/mcp/initialize', async (req, res) => {
+    this.app.post(`${this.mcpPath}/initialize`, async (req, res) => {
       try {
         const minimalMode = process.env.MCP_MINIMAL_MODE === 'true';
         const simplifySchema = process.env.MCP_SIMPLIFY_SCHEMA === 'true';
@@ -227,7 +232,7 @@ export class HttpMcpServer {
     });
 
     // Tools list endpoint
-    this.app.get('/mcp/tools', async (req, res) => {
+    this.app.get(`${this.mcpPath}/tools`, async (req, res) => {
       try {
         const tools = this.controller.getAvailableTools();
         const minimalMode = process.env.MCP_MINIMAL_MODE === 'true';
@@ -275,7 +280,7 @@ export class HttpMcpServer {
     });
 
     // Tool execution endpoint
-    this.app.post('/mcp/tools/:toolName', async (req, res) => {
+    this.app.post(`${this.mcpPath}/tools/:toolName`, async (req, res) => {
       try {
         const { toolName } = req.params;
         const args = req.body;
@@ -295,7 +300,7 @@ export class HttpMcpServer {
     });
 
     // MCP Streamable HTTP Transport endpoint
-    this.app.post('/mcp', async (req, res) => {
+    this.app.post(this.mcpPath, async (req, res) => {
       try {
         const protocolVersion = req.header('MCP-Protocol-Version') || '2024-11-05';
         const isInitialize = req.body?.method === 'initialize';
@@ -374,7 +379,7 @@ export class HttpMcpServer {
     });
     
     // Optional GET endpoint for SSE stream (server-initiated messages)
-    this.app.get('/mcp', (req, res) => {
+    this.app.get(this.mcpPath, (req, res) => {
       const sessionId = req.header('Mcp-Session-Id');
       if (!sessionId || !this.sessions.has(sessionId)) {
         return res.status(400).send('Missing or invalid Mcp-Session-Id header');
@@ -399,7 +404,7 @@ export class HttpMcpServer {
     });
     
     // DELETE endpoint to terminate session
-    this.app.delete('/mcp', (req, res) => {
+    this.app.delete(this.mcpPath, (req, res) => {
       const sessionId = req.header('Mcp-Session-Id');
       if (!sessionId || !this.sessions.has(sessionId)) {
         return res.status(404).json({
@@ -414,7 +419,7 @@ export class HttpMcpServer {
     });
 
     // Batch tool execution
-    this.app.post('/mcp/batch', async (req, res) => {
+    this.app.post(`${this.mcpPath}/batch`, async (req, res) => {
       try {
         const { tools } = req.body;
         
@@ -453,7 +458,7 @@ export class HttpMcpServer {
 
   private setupUtilityRoutes(): void {
     // Health check endpoint
-    this.app.get('/health', (req, res) => {
+    this.app.get(`${this.utilPath}/health`, (req, res) => {
       res.json({ 
         status: 'healthy', 
         protocol: 'mcp-http',
@@ -464,7 +469,7 @@ export class HttpMcpServer {
     });
 
     // Server info endpoint
-    this.app.get('/info', (req, res) => {
+    this.app.get(`${this.utilPath}/info`, (req, res) => {
       res.json({
         name: 'Odoo MCP HTTP Server',
         version: '1.0.0',
@@ -479,20 +484,20 @@ export class HttpMcpServer {
           streaming: false
         },
         endpoints: {
-          'POST /mcp/initialize': 'Initialize MCP session',
-          'GET /mcp/tools': 'List available tools',
-          'POST /mcp/tools/:name': 'Execute specific tool',
-          'POST /mcp': 'JSON-RPC 2.0 endpoint',
-          'POST /mcp/batch': 'Execute multiple tools',
-          'GET /health': 'Health check',
-          'GET /info': 'Server information',
-          'GET /docs': 'API documentation'
+          [`POST ${this.mcpPath}/initialize`]: 'Initialize MCP session',
+          [`GET ${this.mcpPath}/tools`]: 'List available tools',
+          [`POST ${this.mcpPath}/tools/:name`]: 'Execute specific tool',
+          [`POST ${this.mcpPath}`]: 'JSON-RPC 2.0 endpoint',
+          [`POST ${this.mcpPath}/batch`]: 'Execute multiple tools',
+          [`GET ${this.utilPath}/health`]: 'Health check',
+          [`GET ${this.utilPath}/info`]: 'Server information',
+          [`GET ${this.utilPath}/docs`]: 'API documentation'
         }
       });
     });
 
     // API Documentation endpoint
-    this.app.get('/docs', (req, res) => {
+    this.app.get(`${this.utilPath}/docs`, (req, res) => {
       res.json({
         title: 'Odoo MCP HTTP Server API Documentation',
         version: '1.0.0',
@@ -501,7 +506,7 @@ export class HttpMcpServer {
         
         endpoints: {
           initialization: {
-            'POST /mcp/initialize': {
+            [`POST ${this.mcpPath}/initialize`]: {
               description: 'Initialize MCP session',
               request: {},
               response: {
@@ -513,7 +518,7 @@ export class HttpMcpServer {
           },
           
           tools: {
-            'GET /mcp/tools': {
+            [`GET ${this.mcpPath}/tools`]: {
               description: 'List all available tools',
               response: {
                 success: true,
@@ -521,7 +526,7 @@ export class HttpMcpServer {
               }
             },
             
-            'POST /mcp/tools/:toolName': {
+            [`POST ${this.mcpPath}/tools/:toolName`]: {
               description: 'Execute a specific tool',
               parameters: { toolName: 'Tool name from tools list' },
               request: { /* tool-specific arguments */ },
@@ -533,7 +538,7 @@ export class HttpMcpServer {
           },
           
           batch: {
-            'POST /mcp/batch': {
+            [`POST ${this.mcpPath}/batch`]: {
               description: 'Execute multiple tools in parallel',
               request: {
                 tools: [
@@ -555,7 +560,7 @@ export class HttpMcpServer {
         examples: {
           'Connect to Odoo': {
             method: 'POST',
-            url: '/mcp/tools/odoo_connect',
+            url: `${this.mcpPath}/tools/odoo_connect`,
             headers: { 'Content-Type': 'application/json' },
             body: {
               url: 'http://localhost:8069',
@@ -568,7 +573,7 @@ export class HttpMcpServer {
           
           'Search Partners': {
             method: 'POST', 
-            url: '/mcp/tools/odoo_search_read',
+            url: `${this.mcpPath}/tools/odoo_search_read`,
             body: {
               model: 'res.partner',
               domain: [['is_company', '=', true]],
@@ -579,7 +584,7 @@ export class HttpMcpServer {
           
           'Batch Operations': {
             method: 'POST',
-            url: '/mcp/batch',
+            url: `${this.mcpPath}/batch`,
             body: {
               tools: [
                 {
@@ -604,16 +609,16 @@ export class HttpMcpServer {
         error: 'Endpoint not found',
         available_endpoints: {
           mcp: [
-            'POST /mcp/initialize',
-            'GET /mcp/tools', 
-            'POST /mcp/tools/:toolName',
-            'POST /mcp',
-            'POST /mcp/batch'
+            `POST ${this.mcpPath}/initialize`,
+            `GET ${this.mcpPath}/tools`,
+            `POST ${this.mcpPath}/tools/:toolName`,
+            `POST ${this.mcpPath}`,
+            `POST ${this.mcpPath}/batch`
           ],
           utilities: [
-            'GET /health',
-            'GET /info',
-            'GET /docs'
+            `GET ${this.utilPath}/health`,
+            `GET ${this.utilPath}/info`,
+            `GET ${this.utilPath}/docs`
           ]
         }
       });
@@ -763,9 +768,9 @@ export class HttpMcpServer {
       this.app.listen(this.port, () => {
         logServerEvent(`HTTP MCP Server started on port ${this.port}`);
         console.error(`🌍 Odoo MCP HTTP Server running at http://localhost:${this.port}`);
-        console.error(`📚 API Documentation: http://localhost:${this.port}/docs`);
-        console.error(`🏥 Health Check: http://localhost:${this.port}/health`);
-        console.error(`🔧 Server Info: http://localhost:${this.port}/info`);
+        console.error(`📚 API Documentation: http://localhost:${this.port}${this.utilPath}/docs`);
+        console.error(`🏥 Health Check: http://localhost:${this.port}${this.utilPath}/health`);
+        console.error(`🔧 Server Info: http://localhost:${this.port}${this.utilPath}/info`);
         resolve();
       });
     });
